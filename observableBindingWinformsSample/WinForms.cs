@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Beobach.Observables;
 
 namespace Beobach.BindingProviders
 {
@@ -17,7 +18,7 @@ namespace Beobach.BindingProviders
                 {
                     control.Text = value;
                 }
-            });
+            }, controls);
             for (int i = 0; i < controls.Length; i++)
             {
                 var control = controls[i];
@@ -31,7 +32,7 @@ namespace Beobach.BindingProviders
 
         public static void BindCheckBox(this ObservableProperty<bool> property, CheckBox checkBox)
         {
-            property.Subscribe(value => checkBox.Checked = value);
+            property.Subscribe(value => checkBox.Checked = value, checkBox);
             if (!property.IsReadOnly)
                 checkBox.CheckedChanged += (sender, args) => property.Value = checkBox.Checked;
             checkBox.Checked = property;

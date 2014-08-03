@@ -39,9 +39,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BeobachHelper.cs" />
-    <Compile Include="ComputedObservable.cs" />
-    <Compile Include="ObservableProperty.cs" />
+    <Compile Include="ArrayChangeSubscription.cs" />
+    <Compile Include="NotificationHelper.cs" />
+    <Compile Include="Extensions\LinqExtensions.cs" />
+    <Compile Include="Observables\ComputedObservable.cs" />
+    <Compile Include="Observables\ObservableList.cs" />
+    <Compile Include="Observables\ObservableProperty.cs" />
     <Compile Include="ObservableSubscription.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewModelBase.cs" />
