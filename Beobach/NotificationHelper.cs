@@ -10,16 +10,21 @@ namespace Beobach
 {
     public static class NotificationHelper
     {
-        internal static event Action<IObservableProperty> OnValueAccessed;
+        private static event Action<IObservableProperty> OnValueAccessed;
+        private static event Action<IObservableList, int> OnIndexAccessed;
 
-        internal static HashSet<IObservableProperty> CatchValuesAccessed(Action access)
+        internal static HashSet<PropertyAccessNotification> CatchValuesAccessed(Action access)
         {
-            var properties = new HashSet<IObservableProperty>();
-            Action<IObservableProperty> accessed = property => properties.Add(property);
+            var accessNotifications = new HashSet<PropertyAccessNotification>();
+            Action<IObservableProperty> accessed = property => accessNotifications.Add(new PropertyAccessNotification(property));
+            Action<IObservableList, int> accessedIndex =
+                (list, i) => accessNotifications.Add(new IndexAccessNotification(list, i));
             OnValueAccessed += accessed;
+            OnIndexAccessed += accessedIndex;
             access();
             OnValueAccessed -= accessed;
-            return properties;
+            OnIndexAccessed -= accessedIndex;
+            return accessNotifications;
         }
 
         internal static void ValueAccessed(IObservableProperty observableProperty)
@@ -28,6 +33,14 @@ namespace Beobach
             Action<IObservableProperty> handler = OnValueAccessed;
             if (handler != null) handler(observableProperty);
             observableProperty.IsAccessed = false;
+        }
+
+        internal static void IndexAccessed(IObservableList observableList, int index)
+        {
+            observableList.IsAccessed = true;
+            var handler = OnIndexAccessed;
+            if (handler != null) handler(observableList, index);
+            observableList.IsAccessed = false;
         }
 
         internal static event Action<object> OnNotifyAccessed;

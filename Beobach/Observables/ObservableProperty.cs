@@ -6,8 +6,8 @@ namespace Beobach.Observables
 {
     internal interface IObservableProperty
     {
-        ObservableSubscription Subscribe(Action subscriptionCallback, object subscriber);
-        ObservableSubscription Subscribe(Action subscriptionCallback, string notificationType, object subscriber);
+        IObservableSubscription Subscribe(Action subscriptionCallback, object subscriber);
+        IObservableSubscription Subscribe(Action subscriptionCallback, string notificationType, object subscriber);
 
         void NotifySubscribers(object newVal);
         bool IsNotifying(string notificationType);
@@ -20,12 +20,13 @@ namespace Beobach.Observables
         public const string VALUE_CHANGED_EVENT = "valueChanged";
         public const string BEFORE_VALUE_CHANGED_EVENT = "beforeValueChanged";
         public const string ARRAY_CHANGE = "arrayChange";
+        public const int SUBSCRIBE_ALL_CHANGES_INDEX = -1;
     }
 
     public class ObservableProperty<T> : ObservableProperty, IObservableProperty
     {
-        internal readonly Dictionary<string, List<ObservableSubscription>> _subscribers =
-            new Dictionary<string, List<ObservableSubscription>>();
+        internal readonly Dictionary<string, List<IObservableSubscription>> _subscribers =
+            new Dictionary<string, List<IObservableSubscription>>();
 
         internal readonly HashSet<string> isNotifiying = new HashSet<string>();
 
@@ -80,7 +81,7 @@ namespace Beobach.Observables
 
         public bool HasSubscribersType(string notificationType)
         {
-            List<ObservableSubscription> subscribers;
+            List<IObservableSubscription> subscribers;
             if (!_subscribers.TryGetValue(notificationType, out subscribers)) return false;
             return subscribers.Any(subscription => !subscription.Removed);
         }
@@ -95,26 +96,24 @@ namespace Beobach.Observables
             NotifySubscribers((T) newVal);
         }
 
-        public virtual void NotifySubscribers<T_SUB>(T_SUB newVal, string notificationType)
+        public void NotifySubscribers<T_SUB>(T_SUB newVal, string notificationType)
         {
             try
             {
                 if (!isNotifiying.Add(notificationType)) return;
-                List<ObservableSubscription> subscribers;
+                List<IObservableSubscription> subscribers;
                 if (!_subscribers.TryGetValue(notificationType, out subscribers)) return;
 
-                var notified = new List<IObservableProperty>();
+                var alreadyNotified = new List<IObservableProperty>();
                 for (int i = 0; i < subscribers.Count; i++)
                 {
-                    ObservableSubscription subscriber = subscribers[i];
+                    IObservableSubscription subscriber = subscribers[i];
 
-                    if (subscriber.Removed || //don't notify if removed
-                        subscriber.IsSubscriberNotifying(notificationType) ||
-                        //don't notify if is already notifying to prevent loops
-                        notified.Any(subscriber.Subscriber)) continue; //dont notify when already notified
+                    if (!ShouldNotifyChanged(subscriber, notificationType, newVal) ||
+                        alreadyNotified.Any(subscriber.Subscriber)) continue; //dont notify when already notified
                     var subScriberNotified =
                         NotificationHelper.CatchNotifications(() => subscriber.NotifyChanged(newVal));
-                    notified.AddRange(subScriberNotified.OfType<IObservableProperty>());
+                    alreadyNotified.AddRange(subScriberNotified.OfType<IObservableProperty>());
                 }
                 subscribers.RemoveAll(subscription => subscription.Removed);
             }
@@ -122,6 +121,16 @@ namespace Beobach.Observables
             {
                 isNotifiying.Remove(notificationType);
             }
+        }
+
+        internal virtual bool ShouldNotifyChanged<T_SUB>(IObservableSubscription subscription,
+            string notificationType,
+            T_SUB newVal)
+        {
+            //don't notify if removed
+            return !subscription.Removed &&
+                   !subscription.IsSubscriberNotifying(notificationType);
+            //don't notify if is already notifying to prevent loops
         }
 
         bool IObservableProperty.IsNotifying(string notificationType)
@@ -132,22 +141,22 @@ namespace Beobach.Observables
         protected virtual void AddSubscription<T_SUB>(ObservableSubscription<T_SUB> subscription,
             string notificationType)
         {
-            List<ObservableSubscription> subscribers;
+            List<IObservableSubscription> subscribers;
             if (!_subscribers.TryGetValue(notificationType, out subscribers))
             {
-                subscribers = new List<ObservableSubscription>();
+                subscribers = new List<IObservableSubscription>();
                 _subscribers.Add(notificationType, subscribers);
             }
 
             subscribers.Add(subscription);
         }
 
-        ObservableSubscription IObservableProperty.Subscribe(Action subscriptionCallback, object subscriber)
+        IObservableSubscription IObservableProperty.Subscribe(Action subscriptionCallback, object subscriber)
         {
             return ((IObservableProperty) this).Subscribe(subscriptionCallback, VALUE_CHANGED_EVENT, subscriber);
         }
 
-        ObservableSubscription IObservableProperty.Subscribe(Action subscriptionCallback,
+        IObservableSubscription IObservableProperty.Subscribe(Action subscriptionCallback,
             string notificationType,
             object subscriber)
         {
@@ -189,7 +198,7 @@ namespace Beobach.Observables
 
         public override string ToString()
         {
-            return Name ?? string.Format("Value: {0}, Type:{1}", Peek(), GetType().Name);
+            return Name ?? base.ToString();
         }
 
         public static implicit operator T(ObservableProperty<T> property)

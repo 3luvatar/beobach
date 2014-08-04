@@ -9,13 +9,32 @@ using Beobach.Extensions;
 
 namespace Beobach.Observables
 {
-    public class ObservableList<T> : ObservableProperty<List<T>>, IList<T>
+    internal interface IObservableList : IObservableProperty
+    {
+        IArrayChangeSubscription SubscribeArrayChange(Action subscriptionCallback, object subscriber);
+        IArrayChangeSubscription SubscribeIndexChange(Action subscriptionCallback, object subscriber, int index);
+    }
+
+    public static class ObservableList
+    {
+        public static ObservableList<ObservableProperty<T>> New<T>(params T[] values)
+        {
+            return new ObservableList<ObservableProperty<T>>(values.Select(t => new ObservableProperty<T>(t)));
+        }
+    }
+
+    public class ObservableList<T> : ObservableProperty<List<T>>, IList<T>, IObservableList
     {
         public ObservableList() : this(new List<T>())
         {
         }
 
         public ObservableList(List<T> value) : base(value)
+        {
+        }
+
+        public ObservableList(IEnumerable<T> value)
+            : base(value.ToList())
         {
         }
 
@@ -28,13 +47,34 @@ namespace Beobach.Observables
             get { return HasSubscribersType(ARRAY_CHANGE); }
         }
 
+        IArrayChangeSubscription IObservableList.SubscribeArrayChange(Action subscriptionCallback, object subscriber)
+        {
+            return SubscribeArrayChange(value => subscriptionCallback(), subscriber);
+        }
+
+        IArrayChangeSubscription IObservableList.SubscribeIndexChange(Action subscriptionCallback,
+            object subscriber,
+            int index)
+        {
+            return SubscribeArrayChange(value => subscriptionCallback(), subscriber, index);
+        }
+
         public ArrayChangeSubscription<T> SubscribeArrayChange(
             SubscriptionCallBack<IList<ArrayChange<T>>> subscriptionCallback,
             object subscriber)
         {
+            return SubscribeArrayChange(subscriptionCallback, subscriber, SUBSCRIBE_ALL_CHANGES_INDEX);
+        }
+
+        private ArrayChangeSubscription<T> SubscribeArrayChange(
+            SubscriptionCallBack<IList<ArrayChange<T>>> subscriptionCallback,
+            object subscriber,
+            int index)
+        {
             ArrayChangeSubscription<T> subscription = new ArrayChangeSubscription<T>(this,
                 subscriptionCallback,
-                subscriber);
+                subscriber,
+                index);
             AddSubscription(subscription, ARRAY_CHANGE);
             return subscription;
         }
@@ -82,6 +122,22 @@ namespace Beobach.Observables
             NotifySubscribers((changes as IList<ArrayChange<T>>) ?? changes.ToList(), ARRAY_CHANGE);
         }
 
+        internal override bool ShouldNotifyChanged<T_SUB>(IObservableSubscription subscription,
+            string notificationType,
+            T_SUB newVal)
+        {
+            if (notificationType == ARRAY_CHANGE &&
+                newVal is IList<ArrayChange<T>> &&
+                subscription is ArrayChangeSubscription<T>)
+            {
+                var arrayChangeSubscription = (ArrayChangeSubscription<T>) subscription;
+                var changes = (IList<ArrayChange<T>>) newVal;
+                if (arrayChangeSubscription.SubscribedIndex != SUBSCRIBE_ALL_CHANGES_INDEX &&
+                    changes.All(change => change.Index != arrayChangeSubscription.SubscribedIndex)) return false;
+            }
+            return base.ShouldNotifyChanged(subscription, notificationType, newVal);
+        }
+
         public override List<T> Value
         {
             get { return base.Value; } //TODO check on mutating the list externally
@@ -90,8 +146,19 @@ namespace Beobach.Observables
 
         public T this[int index]
         {
-            get { return _value[index]; }
-            set { _value[index] = value; }
+            get
+            {
+                NotificationHelper.IndexAccessed(this, index);
+                return _value[index];
+            }
+            set
+            {
+                T oldVal = _value[index];
+                _value[index] = value;
+                NotifySubscribers(_value);
+                NotifyArrayChange(ArrayChange(ArrayChangeType.add, value, index),
+                    ArrayChange(ArrayChangeType.remove, oldVal, index));
+            }
         }
 
         public T Pop()
@@ -241,107 +308,107 @@ namespace Beobach.Observables
 
         public int Count
         {
-            get { return _value.Count; }
+            get { return Value.Count; }
         }
 
         public T[] ToArray()
         {
-            return _value.ToArray();
+            return Value.ToArray();
         }
 
         public int LastIndexOf(T item, int index, int count)
         {
-            return _value.LastIndexOf(item, index, count);
+            return Value.LastIndexOf(item, index, count);
         }
 
         public int LastIndexOf(T item, int index)
         {
-            return _value.LastIndexOf(item, index);
+            return Value.LastIndexOf(item, index);
         }
 
         public int LastIndexOf(T item)
         {
-            return _value.LastIndexOf(item);
+            return Value.LastIndexOf(item);
         }
 
         public int IndexOf(T item, int index, int count)
         {
-            return _value.IndexOf(item, index, count);
+            return Value.IndexOf(item, index, count);
         }
 
         public int IndexOf(T item, int index)
         {
-            return _value.IndexOf(item, index);
+            return Value.IndexOf(item, index);
         }
 
         public int IndexOf(T item)
         {
-            return _value.IndexOf(item);
+            return Value.IndexOf(item);
         }
 
         public List<T> GetRange(int index, int count)
         {
-            return _value.GetRange(index, count);
+            return Value.GetRange(index, count);
         }
 
         public int FindLastIndex(int startIndex, int count, Predicate<T> match)
         {
-            return _value.FindLastIndex(startIndex, count, match);
+            return Value.FindLastIndex(startIndex, count, match);
         }
 
         public int FindLastIndex(int startIndex, Predicate<T> match)
         {
-            return _value.FindLastIndex(startIndex, match);
+            return Value.FindLastIndex(startIndex, match);
         }
 
         public int FindLastIndex(Predicate<T> match)
         {
-            return _value.FindLastIndex(match);
+            return Value.FindLastIndex(match);
         }
 
         public T FindLast(Predicate<T> match)
         {
-            return _value.FindLast(match);
+            return Value.FindLast(match);
         }
 
         public int FindIndex(int startIndex, int count, Predicate<T> match)
         {
-            return _value.FindIndex(startIndex, count, match);
+            return Value.FindIndex(startIndex, count, match);
         }
 
         public int FindIndex(int startIndex, Predicate<T> match)
         {
-            return _value.FindIndex(startIndex, match);
+            return Value.FindIndex(startIndex, match);
         }
 
         public int FindIndex(Predicate<T> match)
         {
-            return _value.FindIndex(match);
+            return Value.FindIndex(match);
         }
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            _value.CopyTo(array, arrayIndex);
+            Value.CopyTo(array, arrayIndex);
         }
 
         public void CopyTo(int index, T[] array, int arrayIndex, int count)
         {
-            _value.CopyTo(index, array, arrayIndex, count);
+            Value.CopyTo(index, array, arrayIndex, count);
         }
 
         public void CopyTo(T[] array)
         {
-            _value.CopyTo(array);
+            Value.CopyTo(array);
         }
 
         public bool Contains(T item)
         {
-            return _value.Contains(item);
+            return Value.Contains(item);
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            return _value.GetEnumerator();
+            return Value.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

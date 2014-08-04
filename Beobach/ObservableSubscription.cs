@@ -7,7 +7,7 @@ using Beobach.Observables;
 
 namespace Beobach
 {
-    internal interface ObservableSubscription : IDisposable
+    internal interface IObservableSubscription : IDisposable
     {
         bool ForObservable(IObservableProperty property);
         bool Subscriber(IObservableProperty property);
@@ -16,7 +16,7 @@ namespace Beobach
         bool IsSubscriberNotifying(string notificationType);
     }
 
-    public class ObservableSubscription<T> : ObservableSubscription
+    public class ObservableSubscription<T> : IObservableSubscription
     {
         private readonly ObservableProperty _observableProperty;
         protected SubscriptionCallBack<T> Subscription;
@@ -27,7 +27,7 @@ namespace Beobach
             get { return _subscriber as IObservableProperty; }
         }
 
-        bool ObservableSubscription.Removed
+        bool IObservableSubscription.Removed
         {
             get { return Removed; }
             set { Removed = value; }
@@ -49,17 +49,17 @@ namespace Beobach
             Subscription = subscription;
         }
 
-        bool ObservableSubscription.ForObservable(IObservableProperty property)
+        bool IObservableSubscription.ForObservable(IObservableProperty property)
         {
             return property == _observableProperty;
         }
 
-        bool ObservableSubscription.Subscriber(IObservableProperty property)
+        bool IObservableSubscription.Subscriber(IObservableProperty property)
         {
             return property == _subscriber;
         }
 
-        bool ObservableSubscription.IsSubscriberNotifying(string notificationType)
+        bool IObservableSubscription.IsSubscriberNotifying(string notificationType)
         {
             return observableSubscriber != null && observableSubscriber.IsNotifying(notificationType);
         }
@@ -76,7 +76,7 @@ namespace Beobach
             Subscription(value);
         }
 
-        void ObservableSubscription.NotifyChanged(object value)
+        void IObservableSubscription.NotifyChanged(object value)
         {
             NotifyChanged((T) value);
         }

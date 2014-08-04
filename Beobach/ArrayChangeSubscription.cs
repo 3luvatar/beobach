@@ -7,13 +7,30 @@ using Beobach.Observables;
 
 namespace Beobach
 {
-    public class ArrayChangeSubscription<T> : ObservableSubscription<IList<ArrayChange<T>>>
+    internal interface IArrayChangeSubscription : IObservableSubscription
+    {
+    }
+
+    public class ArrayChangeSubscription<T> : ObservableSubscription<IList<ArrayChange<T>>>, IArrayChangeSubscription
     {
         public ArrayChangeSubscription(ObservableList<T> observableProperty,
-            SubscriptionCallBack<IList<ArrayChange<T>>> subscription, object subscriber)
+            SubscriptionCallBack<IList<ArrayChange<T>>> subscription,
+            object subscriber)
             : base(observableProperty, subscription, subscriber)
         {
+            SubscribedIndex = ObservableProperty.SUBSCRIBE_ALL_CHANGES_INDEX;
         }
+
+        public ArrayChangeSubscription(ObservableList<T> observableProperty,
+            SubscriptionCallBack<IList<ArrayChange<T>>> subscription,
+            object subscriber,
+            int subscribedIndex)
+            : base(observableProperty, subscription, subscriber)
+        {
+            SubscribedIndex = subscribedIndex;
+        }
+
+        internal int SubscribedIndex { get; private set; }
     }
 
     public class ArrayChange<T>

@@ -39,6 +39,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AccessNotification.cs" />
     <Compile Include="ArrayChangeSubscription.cs" />
     <Compile Include="NotificationHelper.cs" />
     <Compile Include="Extensions\LinqExtensions.cs" />

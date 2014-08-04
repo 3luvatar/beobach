@@ -11,40 +11,40 @@ namespace BeobachUnitTests
     [TestClass]
     public class ArrayTests
     {
-        private ObservableList<int> ObservableList;
+        private ObservableList<int> _observableList;
         private int[] initalList = new[] {1, 2, 3, 4, 0};
 
         [TestInitialize]
         public void InitTest()
         {
-            ObservableList = new ObservableList<int>(initalList);
+            _observableList = new ObservableList<int>(initalList);
         }
 
         [TestMethod]
         public void TestHoldValues()
         {
-            CollectionAssert.AreEquivalent(initalList, ObservableList.Value);
-            ObservableList.Add(5);
-            CollectionAssert.Contains(ObservableList.Value, 5);
-            ObservableList.Remove(5);
-            CollectionAssert.DoesNotContain(ObservableList.Value, 5);
+            CollectionAssert.AreEquivalent(initalList, _observableList.Value);
+            _observableList.Add(5);
+            CollectionAssert.Contains(_observableList.Value, 5);
+            _observableList.Remove(5);
+            CollectionAssert.DoesNotContain(_observableList.Value, 5);
         }
 
         [TestMethod]
         public void TestSingleChangeNotify()
         {
             IList<ArrayChange<int>> changes = null;
-            ObservableList.SubscribeArrayChange(value => { changes = value; }, "test");
-            int expectedIndex = ObservableList.Count;
-            ObservableList.Add(10);
+            _observableList.SubscribeArrayChange(value => { changes = value; }, "test");
+            int expectedIndex = _observableList.Count;
+            _observableList.Add(10);
             CollectionAssert.AreEquivalent(new[] {new ArrayChange<int>(ArrayChangeType.add, 10, expectedIndex)},
                 (ICollection) changes);
 
-            CollectionAssert.Contains(ObservableList.Value, 10);
-            ObservableList.Remove(10);
+            CollectionAssert.Contains(_observableList.Value, 10);
+            _observableList.Remove(10);
             CollectionAssert.AreEquivalent(new[] {new ArrayChange<int>(ArrayChangeType.remove, 10, expectedIndex)},
                 (ICollection) changes);
-            CollectionAssert.DoesNotContain(ObservableList.Value, 10);
+            CollectionAssert.DoesNotContain(_observableList.Value, 10);
         }
 
         [TestMethod]
@@ -172,7 +172,23 @@ namespace BeobachUnitTests
             var observableList = new ObservableList<int>(originalList);
             CollectionAssert.Contains(observableList.Value, 2);
             observableList.Remove(2);
-            CollectionAssert.DoesNotContain(observableList.Value, 2);
+            CollectionAssert.DoesNotContain(originalList, 2);
+        }
+
+        [TestMethod]
+        public void TestReplaceValue()
+        {
+            var list = new ObservableList<string>("E", "B", "D", "C", "A");
+            IList<ArrayChange<string>> changes = null;
+            list.SubscribeArrayChange(value => { changes = value; }, "test");
+            list[2] = "X";
+            Assert.AreEqual("X", list[2]);
+            CollectionAssert.AreEquivalent(new[]
+            {
+                new ArrayChange<string>(ArrayChangeType.remove, "D", 2),
+                new ArrayChange<string>(ArrayChangeType.add, "X", 2),
+            },
+                (ICollection) changes);
         }
     }
 }

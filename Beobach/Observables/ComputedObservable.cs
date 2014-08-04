@@ -13,8 +13,8 @@ namespace Beobach.Observables
         private bool _hasBeenAccessed;
         private bool _isDisposed;
         //observables this computed is subscribed to
-        private readonly List<ObservableSubscription> _subscriptions = new List<ObservableSubscription>();
-        private HashSet<IObservableProperty> _subscribedObservables = new HashSet<IObservableProperty>();
+        private readonly List<IObservableSubscription> _subscriptions = new List<IObservableSubscription>();
+        private HashSet<PropertyAccessNotification> _accessNotifications = new HashSet<PropertyAccessNotification>();
 
         public ComputedObservable(ComputeCallBack<T> computeCallBack, bool deferEvaluation)
             : this(computeCallBack, null, deferEvaluation)
@@ -70,10 +70,10 @@ namespace Beobach.Observables
             NotifySubscribers(_value, BEFORE_VALUE_CHANGED_EVENT);
             _hasBeenAccessed = true;
 
-            var accessedProperties = NotificationHelper.CatchValuesAccessed(() => _value = _computeCallBack());
+            var accessNotifications = NotificationHelper.CatchValuesAccessed(() => _value = _computeCallBack());
             if (!_isDisposed)
             {
-                _subscribedObservables = accessedProperties;
+                _accessNotifications = accessNotifications;
                 UpdateSubscriptions();
             }
             _isValid = true;
@@ -89,28 +89,30 @@ namespace Beobach.Observables
 
         private void DisposeSubscriptions()
         {
-            foreach (ObservableSubscription subscription in _subscriptions)
+            foreach (IObservableSubscription subscription in _subscriptions)
             {
                 subscription.Dispose();
             }
-            _subscribedObservables.Clear();
+            _accessNotifications.Clear();
         }
 
         private void UpdateSubscriptions()
         {
             //in DisposeSubscriptions we mark them to be removed, but here we just enable them again
             //if we still need them, then remove any that we dont
-            foreach (var observable in _subscribedObservables)
+            foreach (var accessNotification in _accessNotifications)
             {
-                var subscription =
-                    _subscriptions.SingleOrDefault(sub => sub.ForObservable(observable));
-                if (subscription != null)
+                PropertyAccessNotification notification = accessNotification;
+                var subscriptions = _subscriptions.Where(sub => sub.ForObservable(notification.ObservableProperty));
+                bool hasSubscription = false;
+                foreach (var subscription in subscriptions)
                 {
+                    hasSubscription = true;
                     subscription.Removed = false;
                 }
-                else
+                if (!hasSubscription)
                 {
-                    _subscriptions.Add(observable.Subscribe(OnSubscribedPropertyChanged, this));
+                    _subscriptions.Add(accessNotification.CreateSubscription(OnSubscribedPropertyChanged, this));
                 }
             }
             _subscriptions.RemoveAll(subscription => subscription.Removed);
@@ -118,7 +120,7 @@ namespace Beobach.Observables
 
         public int DependencyCount
         {
-            get { return _subscribedObservables.Count; }
+            get { return _accessNotifications.Count; }
         }
 
         protected override void AddSubscription<T_SUB>(ObservableSubscription<T_SUB> subscription,

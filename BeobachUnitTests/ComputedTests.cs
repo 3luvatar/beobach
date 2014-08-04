@@ -144,6 +144,7 @@ namespace BeobachUnitTests
         {
             var property = new ObservableProperty<int>(2);
             var computed = new ComputedObservable<int>(() => property + property);
+            Assert.AreEqual(1, computed.DependencyCount);
             List<int> notifiedValues = new List<int>();
             computed.Subscribe(value => notifiedValues.Add(value), "test");
             Assert.AreEqual(4, computed.Value);
