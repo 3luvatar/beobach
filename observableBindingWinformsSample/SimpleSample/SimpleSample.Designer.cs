@@ -1,6 +1,6 @@
 ﻿namespace observableBindingWinformsSample
 {
-    partial class Form1
+    partial class SimpleSample
     {
         /// <summary>
         /// Required designer variable.
@@ -125,7 +125,7 @@
             this.middleNameLabel.TabIndex = 9;
             this.middleNameLabel.Text = "label5";
             // 
-            // Form1
+            // SimpleSample
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -140,8 +140,8 @@
             this.Controls.Add(this.firstNameTextBox);
             this.Controls.Add(this.fullNameLabel);
             this.Controls.Add(this.label1);
-            this.Name = "Form1";
-            this.Text = "Form1";
+            this.Name = "SimpleSample";
+            this.Text = "SimpleSample";
             this.ResumeLayout(false);
             this.PerformLayout();
 

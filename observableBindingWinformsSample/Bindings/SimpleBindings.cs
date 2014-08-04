@@ -8,7 +8,7 @@ using Beobach.Observables;
 
 namespace Beobach.BindingProviders
 {
-    public static class WinForms
+    public static class SimpleBindings
     {
         public static void BindText(this ObservableProperty<string> property, params Control[] controls)
         {
@@ -26,6 +26,26 @@ namespace Beobach.BindingProviders
                 if (!property.IsReadOnly)
                 {
                     control.TextChanged += (sender, args) => property.Value = control.Text;
+                }
+            }
+        }
+
+        public static void BindText(this ObservableProperty<int> property, params Control[] controls)
+        {
+            property.Subscribe(value =>
+            {
+                foreach (var control in controls)
+                {
+                    control.Text = value.ToString();
+                }
+            }, controls);
+            for (int i = 0; i < controls.Length; i++)
+            {
+                var control = controls[i];
+                control.Text = property.Value.ToString();
+                if (!property.IsReadOnly)
+                {
+                    control.TextChanged += (sender, args) => property.Value = Convert.ToInt32(control.Text);
                 }
             }
         }

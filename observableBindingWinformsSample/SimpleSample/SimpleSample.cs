@@ -11,14 +11,14 @@ using Beobach.BindingProviders;
 
 namespace observableBindingWinformsSample
 {
-    public partial class Form1 : Form
+    public partial class SimpleSample : Form
     {
-        private SampleViewModel ViewModel;
+        private SimpleViewModel ViewModel;
 
-        public Form1()
+        public SimpleSample()
         {
             InitializeComponent();
-            ViewModel = new SampleViewModel();
+            ViewModel = new SimpleViewModel();
             ViewModel.FirstName.BindText(firstNameTextBox);
             ViewModel.LastName.BindText(lastNameTextBox);
             ViewModel.FullName.BindText(fullNameLabel);

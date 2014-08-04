@@ -8,7 +8,7 @@ using Beobach.Observables;
 
 namespace observableBindingWinformsSample
 {
-    public class SampleViewModel
+    public class SimpleViewModel
     {
         public readonly ObservableProperty<string> FirstName = new ObservableProperty<string>();
         public readonly ObservableProperty<string> LastName = new ObservableProperty<string>();
@@ -17,7 +17,7 @@ namespace observableBindingWinformsSample
         public readonly ComputedObservable<string> FullName;
 
 
-        public SampleViewModel()
+        public SimpleViewModel()
         {
             FullName =
                 new ComputedObservable<string>(

@@ -58,6 +58,8 @@ namespace BeobachUnitTests
 
             list[1] = 10;
             CollectionAssert.AreEquivalent(new[] {1.0, 100.0, 9.0, 16.0, 25.0, 36.0}, computed.Value);
+            list.Add(100);
+            CollectionAssert.Contains(computed.Value, 10000.0);
         }
 
         [TestMethod]

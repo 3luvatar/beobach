@@ -140,7 +140,11 @@ namespace Beobach.Observables
 
         public override List<T> Value
         {
-            get { return base.Value; } //TODO check on mutating the list externally
+            get
+            {
+                NotificationHelper.IndexAccessed(this, SUBSCRIBE_ALL_CHANGES_INDEX);
+                return _value;
+            }
             set { base.Value = value; }
         }
 
