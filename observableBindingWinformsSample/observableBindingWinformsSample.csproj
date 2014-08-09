@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bindings\CheckBoxBinding.cs" />
+    <Compile Include="Bindings\ListBinding.cs" />
     <Compile Include="CheckBoxListSample.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -52,6 +53,13 @@
       <DependentUpon>CheckBoxListSample.cs</DependentUpon>
     </Compile>
     <Compile Include="CheckBoxSampleViewModel.cs" />
+    <Compile Include="SelectedListSample.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SelectedListSample.Designer.cs">
+      <DependentUpon>SelectedListSample.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SelectedListViewModel.cs" />
     <Compile Include="SimpleSample\SimpleSample.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -64,6 +72,9 @@
     <Compile Include="Bindings\SimpleBindings.cs" />
     <EmbeddedResource Include="CheckBoxListSample.resx">
       <DependentUpon>CheckBoxListSample.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SelectedListSample.resx">
+      <DependentUpon>SelectedListSample.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="SimpleSample\SimpleSample.resx">
       <DependentUpon>SimpleSample.cs</DependentUpon>

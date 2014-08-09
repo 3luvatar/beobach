@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Beobach;
 using Beobach.Observables;
 
 namespace observableBindingWinformsSample
@@ -14,11 +15,11 @@ namespace observableBindingWinformsSample
 
         public CheckBoxSampleViewModel()
         {
-            InvitedGuests = new ObservableList<InvitedGuestViewModel>(new InvitedGuestViewModel("Ted"),
+            InvitedGuests = Observe.List(new InvitedGuestViewModel("Ted"),
                 new InvitedGuestViewModel("Fred"),
                 new InvitedGuestViewModel("Becky", true),
                 new InvitedGuestViewModel("Nathan"));
-            AttendingGuests = new ComputedObservable<int>(() => InvitedGuests.Count(model => model.Attending));
+            AttendingGuests = Observe.Compute(() => InvitedGuests.Count(model => model.Attending));
         }
 
         public void Invite(string name)
@@ -34,8 +35,8 @@ namespace observableBindingWinformsSample
 
         public InvitedGuestViewModel(string name, bool attending = false)
         {
-            Attending = new ObservableProperty<bool>(attending);
-            Name = new ObservableProperty<string>(name);
+            Attending = Observe.Value(attending);
+            Name = Observe.Value(name);
         }
     }
 }

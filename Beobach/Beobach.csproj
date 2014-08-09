@@ -39,6 +39,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Observe.cs" />
     <Compile Include="Subscriptions\AccessNotification.cs" />
     <Compile Include="Subscriptions\ArrayChangeSubscription.cs" />
     <Compile Include="Subscriptions\NotificationHelper.cs" />
