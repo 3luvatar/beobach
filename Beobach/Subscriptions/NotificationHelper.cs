@@ -1,45 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Beobach.Observables;
 
-namespace Beobach
+namespace Beobach.Subscriptions
 {
     public static class NotificationHelper
     {
-        private static event Action<IObservableProperty> OnValueAccessed;
-        private static event Action<IObservableList, int> OnIndexAccessed;
+        private static readonly Stack<Action<PropertyAccessNotification>> BeingComputed =
+            new Stack<Action<PropertyAccessNotification>>();
 
         internal static HashSet<PropertyAccessNotification> CatchValuesAccessed(Action access)
         {
             var accessNotifications = new HashSet<PropertyAccessNotification>();
-            Action<IObservableProperty> accessed = property => accessNotifications.Add(new PropertyAccessNotification(property));
-            Action<IObservableList, int> accessedIndex =
-                (list, i) => accessNotifications.Add(new IndexAccessNotification(list, i));
-            OnValueAccessed += accessed;
-            OnIndexAccessed += accessedIndex;
+            BeingComputed.Push(notification => accessNotifications.Add(notification));
             access();
-            OnValueAccessed -= accessed;
-            OnIndexAccessed -= accessedIndex;
+            BeingComputed.Pop();
             return accessNotifications;
         }
 
         internal static void ValueAccessed(IObservableProperty observableProperty)
         {
             observableProperty.IsAccessed = true;
-            Action<IObservableProperty> handler = OnValueAccessed;
-            if (handler != null) handler(observableProperty);
+            if (BeingComputed.Count > 0) BeingComputed.Peek()(new PropertyAccessNotification(observableProperty));
             observableProperty.IsAccessed = false;
         }
 
         internal static void IndexAccessed(IObservableList observableList, int index)
         {
             observableList.IsAccessed = true;
-            var handler = OnIndexAccessed;
-            if (handler != null) handler(observableList, index);
+            if (BeingComputed.Count > 0) BeingComputed.Peek()(new IndexAccessNotification(observableList, index));
+
             observableList.IsAccessed = false;
         }
 

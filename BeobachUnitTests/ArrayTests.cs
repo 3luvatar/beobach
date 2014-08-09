@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Beobach;
 using Beobach.Observables;
+using Beobach.Subscriptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BeobachUnitTests

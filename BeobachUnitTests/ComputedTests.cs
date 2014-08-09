@@ -193,6 +193,18 @@ namespace BeobachUnitTests
         }
 
         [TestMethod]
+        public void TestSubscriptionCounts()
+        {
+            var underlyingPropertyLeft = new ObservableProperty<int>(1) { Name = "Left" };
+            var underlyingPropertyRight = new ObservableProperty<int>(1) { Name = "Right" };
+            var simpleComputed = new ComputedObservable<int>(() => underlyingPropertyLeft + 5, true);
+            var layerdComputed = new ComputedObservable<int>(() => simpleComputed + underlyingPropertyRight);
+            Assert.AreEqual(simpleComputed.DependencyCount, 1);
+            Assert.AreEqual(layerdComputed.DependencyCount, 2);
+
+        }
+
+        [TestMethod]
         public void TestPeekComputed()
         {
             var underlyingProperty = new ObservableProperty<int>(1);

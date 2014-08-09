@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Beobach.Extensions;
+using Beobach.Subscriptions;
 
 namespace Beobach.Observables
 {

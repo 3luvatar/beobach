@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Beobach.Observables;
 
-namespace Beobach
+namespace Beobach.Subscriptions
 {
-    internal class PropertyAccessNotification
+    internal class PropertyAccessNotification : IEquatable<PropertyAccessNotification>
     {
         public PropertyAccessNotification(IObservableProperty observableProperty)
         {
@@ -16,7 +12,7 @@ namespace Beobach
 
         public IObservableProperty ObservableProperty { get; set; }
 
-        protected bool Equals(PropertyAccessNotification other)
+        public bool Equals(PropertyAccessNotification other)
         {
             return Equals(ObservableProperty, other.ObservableProperty);
         }
