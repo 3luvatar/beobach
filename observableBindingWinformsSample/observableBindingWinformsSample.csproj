@@ -44,7 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bindings\CheckBoxBinding.cs" />
+    <Compile Include="Bindings\CheckBoxListBinding.cs" />
     <Compile Include="Bindings\ListBinding.cs" />
     <Compile Include="CheckBoxListSample.cs">
       <SubType>Form</SubType>
@@ -53,6 +53,19 @@
       <DependentUpon>CheckBoxListSample.cs</DependentUpon>
     </Compile>
     <Compile Include="CheckBoxSampleViewModel.cs" />
+    <Compile Include="MasterDetailSample\MasterControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="MasterDetailSample\MasterControl.Designer.cs">
+      <DependentUpon>MasterControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MasterDetailSample\MasterDetailSample.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MasterDetailSample\MasterDetailSample.Designer.cs">
+      <DependentUpon>MasterDetailSample.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MasterDetailSample\ViewModel.cs" />
     <Compile Include="SelectedListSample.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -72,6 +85,12 @@
     <Compile Include="Bindings\SimpleBindings.cs" />
     <EmbeddedResource Include="CheckBoxListSample.resx">
       <DependentUpon>CheckBoxListSample.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MasterDetailSample\Mastercontrol.resx">
+      <DependentUpon>MasterControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MasterDetailSample\MasterDetailSample.resx">
+      <DependentUpon>MasterDetailSample.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="SelectedListSample.resx">
       <DependentUpon>SelectedListSample.cs</DependentUpon>

@@ -16,7 +16,7 @@ namespace observableBindingWinformsSample
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new SelectedListSample());
+            Application.Run(new MasterDetailSample.MasterDetailSample());
         }
     }
 }

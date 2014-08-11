@@ -57,5 +57,21 @@ namespace Beobach.BindingProviders
                 checkBox.CheckedChanged += (sender, args) => property.Value = checkBox.Checked;
             checkBox.Checked = property;
         }
+
+        public static void BindDate(this ObservableProperty<DateTime> property, MonthCalendar calendar)
+        {
+            calendar.SetDate(property);
+            calendar.DateSelected += (sender, args) => property.Value = calendar.SelectionStart;
+            property.Subscribe(calendar.SetDate, calendar);
+
+        }
+
+        public static void BindSelectedComboBox<T>(this ObservableProperty<T> property, ComboBox comboBox)
+        {
+            comboBox.SelectedItem = property.Value;
+            property.Subscribe(value => comboBox.SelectedItem = value, comboBox);
+            comboBox.SelectedIndexChanged += (sender, args) => property.Value = (T) comboBox.SelectedItem;
+
+        }
     }
 }

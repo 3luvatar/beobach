@@ -9,7 +9,7 @@ using Beobach.Observables;
 
 namespace observableBindingWinformsSample.Bindings
 {
-    public static class CheckBoxBinding
+    public static class CheckBoxListBinding
     {
         public static CheckBoxBinding<T_MODEL> Bind<T_MODEL>(this
             ObservableList<T_MODEL> observableList,

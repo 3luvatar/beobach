@@ -32,6 +32,11 @@ namespace Beobach
         public static ComputedObservable<T> Compute<T>(ComputeCallBack<T> callBack)
         {
             return new ComputedObservable<T>(callBack);
+        }
+
+        public static ComputedObservable<T> TwoWayComputed<T>(ComputeCallBack<ObservableProperty<T>> callBack)
+        {
+            return new ComputedObservable<T>(() => callBack().Value, value => callBack().Value = value);
         } 
     }
 }
