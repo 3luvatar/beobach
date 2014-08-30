@@ -12,9 +12,8 @@ namespace Beobach.Subscriptions
         public ArrayChangeSubscription(ObservableList<T> observableProperty,
             SubscriptionCallBack<IList<ArrayChange<T>>> subscription,
             object subscriber)
-            : base(observableProperty, subscription, subscriber)
+            : this(observableProperty, subscription, subscriber, ObservableProperty.SUBSCRIBE_ALL_CHANGES_INDEX)
         {
-            SubscribedIndex = ObservableProperty.SUBSCRIBE_ALL_CHANGES_INDEX;
         }
 
         public ArrayChangeSubscription(ObservableList<T> observableProperty,
@@ -29,12 +28,15 @@ namespace Beobach.Subscriptions
         internal int SubscribedIndex { get; private set; }
     }
 
-    public class ArrayChange<T>
+    public interface ArrayChange
     {
-        public ArrayChange()
-        {
-        }
+        ArrayChangeType ChangeType { get; }
+        int Index { get; }
+        object Value { get; }
+    }
 
+    public class ArrayChange<T> : ArrayChange
+    {
         public ArrayChange(ArrayChangeType changeType, T value, int index)
         {
             ChangeType = changeType;
@@ -42,9 +44,10 @@ namespace Beobach.Subscriptions
             Value = value;
         }
 
-        public ArrayChangeType ChangeType { get; set; }
+        public ArrayChangeType ChangeType { get; internal set; }
         public int Index { get; internal set; }
         public T Value { get; internal set; }
+        object ArrayChange.Value { get { return Value; } }
 
         protected bool Equals(ArrayChange<T> other)
         {

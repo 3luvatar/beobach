@@ -281,17 +281,25 @@ namespace BeobachUnitTests
         [TestMethod]
         public void TestLongChains()
         {
-            int depth = 2000;
-            var first = new ObservableProperty<int>(0);
-            var last = first;
-            for (int i = 0; i < depth; i++)
+            try
             {
-                var previous = last;
-                last = new ComputedObservable<int>(() => previous.Value + 1);
+                int depth = 1000;
+                var first = new ObservableProperty<int>(0);
+                var last = first;
+                for (int i = 0; i < depth; i++)
+                {
+                    var previous = last;
+                    last = new ComputedObservable<int>(() => previous.Value + 1);
+                }
+                var all = new ComputedObservable<int>(() => first.Value + last.Value);
+                first.Value = 1;
+                Assert.AreEqual(depth + 2, all.Value);
             }
-            var all = new ComputedObservable<int>(() => first.Value + last.Value);
-            first.Value = 1;
-            Assert.AreEqual(depth + 2, all.Value);
+            catch (StackOverflowException)
+            {
+                Assert.Fail("Stack overflow");
+            }
+            
         }
 
         [TestMethod]

@@ -49,9 +49,9 @@ namespace BeobachUnitTests
             var property = new ObservableProperty<string>("initVal");
             string notifiedValue = null;
             var subscription = property.SubscribeEvent<string>(value => notifiedValue = value, "myEvent", "test");
-            property.NotifySubscribers("bla", "undefinedEvent");
+            property.OnNotifySubscribers("bla", "undefinedEvent");
             Assert.IsNull(notifiedValue);
-            property.NotifySubscribers("expected", "myEvent");
+            property.OnNotifySubscribers("expected", "myEvent");
             Assert.AreEqual("expected", notifiedValue);
         }
 
@@ -62,7 +62,7 @@ namespace BeobachUnitTests
             string notifiedValue = null;
             var subscription = property.Subscribe(value => notifiedValue = value, "test", "myEvent");
             subscription.Dispose();
-            property.NotifySubscribers("ignore", "myEvent");
+            property.OnNotifySubscribers("ignore", "myEvent");
             Assert.IsNull(notifiedValue);
         }
 

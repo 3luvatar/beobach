@@ -55,6 +55,7 @@
     <Compile Include="ComputedTests.cs" />
     <Compile Include="ArrayTests.cs" />
     <Compile Include="ComputeArraySubscriptionTests.cs" />
+    <Compile Include="RateLimitTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Beobach\Beobach.csproj">

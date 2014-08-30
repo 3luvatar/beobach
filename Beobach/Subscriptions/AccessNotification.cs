@@ -14,7 +14,7 @@ namespace Beobach.Subscriptions
 
         public bool Equals(PropertyAccessNotification other)
         {
-            return Equals(ObservableProperty, other.ObservableProperty);
+            return ReferenceEquals(ObservableProperty, other.ObservableProperty);
         }
 
         public override bool Equals(object obj)
@@ -30,7 +30,7 @@ namespace Beobach.Subscriptions
             return (ObservableProperty != null ? ObservableProperty.GetHashCode() : 0);
         }
 
-        public virtual IObservableSubscription CreateSubscription(Action subscriptionCallback, object subscriber)
+        internal virtual IObservableSubscription CreateSubscription(Action<object> subscriptionCallback, object subscriber)
         {
             return ObservableProperty.Subscribe(subscriptionCallback, subscriber);
         }
@@ -56,7 +56,7 @@ namespace Beobach.Subscriptions
             AccesedIndex = index;
         }
 
-        public override IObservableSubscription CreateSubscription(Action subscriptionCallback, object subscriber)
+        internal override IObservableSubscription CreateSubscription(Action<object> subscriptionCallback, object subscriber)
         {
             return ObservableProperty.SubscribeIndexChange(subscriptionCallback, subscriber, AccesedIndex);
         }

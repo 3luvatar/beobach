@@ -29,7 +29,6 @@ namespace Beobach.Subscriptions
         {
             observableList.IsAccessed = true;
             if (BeingComputed.Count > 0) BeingComputed.Peek()(new IndexAccessNotification(observableList, index));
-
             observableList.IsAccessed = false;
         }
 

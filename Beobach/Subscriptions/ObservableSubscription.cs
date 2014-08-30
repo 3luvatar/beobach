@@ -3,7 +3,7 @@ using Beobach.Observables;
 
 namespace Beobach.Subscriptions
 {
-    internal interface IObservableSubscription : IDisposable
+    public interface IObservableSubscription : IDisposable
     {
         bool ForObservable(IObservableProperty property);
         bool Subscriber(IObservableProperty property);
@@ -15,7 +15,7 @@ namespace Beobach.Subscriptions
     public class ObservableSubscription<T> : IObservableSubscription
     {
         private readonly ObservableProperty _observableProperty;
-        protected SubscriptionCallBack<T> Subscription;
+        protected readonly SubscriptionCallBack<T> Subscription;
         private readonly object _subscriber;
 
         private IObservableProperty observableSubscriber

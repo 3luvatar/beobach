@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Beobach.Subscriptions;
 
 namespace Beobach.Observables
 {
-    internal interface IObservableProperty
+    public interface IObservableProperty
     {
-        IObservableSubscription Subscribe(Action subscriptionCallback, object subscriber);
-        IObservableSubscription Subscribe(Action subscriptionCallback, string notificationType, object subscriber);
+        IObservableSubscription Subscribe(Action<object> subscriptionCallback, object subscriber);
+
+        IObservableSubscription Subscribe(Action<object> subscriptionCallback,
+            string notificationType,
+            object subscriber);
 
         void NotifySubscribers(object newVal);
         bool IsNotifying(string notificationType);
@@ -28,8 +33,6 @@ namespace Beobach.Observables
     {
         internal readonly Dictionary<string, List<IObservableSubscription>> _subscribers =
             new Dictionary<string, List<IObservableSubscription>>();
-
-        internal readonly HashSet<string> isNotifiying = new HashSet<string>();
 
         public ObservableProperty()
         {
@@ -53,7 +56,11 @@ namespace Beobach.Observables
             }
             set
             {
-                NotifySubscribers(_value, BEFORE_VALUE_CHANGED_EVENT);
+                if (!IsPendingNotify)
+                {
+                    OnNotifySubscribers(_value, BEFORE_VALUE_CHANGED_EVENT);
+                    if (HasRateLimiter) OriginalNotifyValue = _value;
+                }
                 _value = value;
                 if (!IsAccessed)
                     NotifySubscribers(_value);
@@ -80,7 +87,7 @@ namespace Beobach.Observables
             get { return _subscribers.Values.Any(list => list.Any(subscription => !subscription.Removed)); }
         }
 
-        public bool HasSubscribersType(string notificationType)
+        protected bool HasSubscribersType(string notificationType)
         {
             List<IObservableSubscription> subscribers;
             if (!_subscribers.TryGetValue(notificationType, out subscribers)) return false;
@@ -89,7 +96,7 @@ namespace Beobach.Observables
 
         public void NotifySubscribers(T newVal)
         {
-            NotifySubscribers(newVal, VALUE_CHANGED_EVENT);
+            OnNotifySubscribers(newVal, VALUE_CHANGED_EVENT);
         }
 
         void IObservableProperty.NotifySubscribers(object newVal)
@@ -97,11 +104,65 @@ namespace Beobach.Observables
             NotifySubscribers((T) newVal);
         }
 
-        public void NotifySubscribers<T_SUB>(T_SUB newVal, string notificationType)
+        private readonly HashSet<string> _isNotifiying = new HashSet<string>();
+
+        public virtual void OnNotifySubscribers<T_SUB>(T_SUB newVal, string notificationType)
         {
+            switch (notificationType)
+            {
+                case VALUE_CHANGED_EVENT:
+                    OnNotifyValueChanged((T) ((object) newVal));
+                    return;
+                case BEFORE_VALUE_CHANGED_EVENT:
+                    OnBeforeNotifyValueChanged((T) ((object) newVal));
+                    return;
+                default:
+                    DoNotify(newVal, notificationType);
+                    break;
+            }
+        }
+
+        protected virtual void OnNotifyValueChanged(T newVal)
+        {
+            if (!HasRateLimiter)
+            {
+                DoNotify(newVal, VALUE_CHANGED_EVENT);
+            }
+            else
+            {
+                NotifyDelay(newVal, VALUE_CHANGED_EVENT);
+            }
+        }
+
+        protected virtual void OnBeforeNotifyValueChanged(T oldVal)
+        {
+            DoNotify(oldVal, BEFORE_VALUE_CHANGED_EVENT);
+        }
+
+        protected T OriginalNotifyValue
+        {
+            get { return _originalNotifyValue; }
+            set { _originalNotifyValue = value; }
+        }
+
+        private void NotifyDelay(T newVal, string notificationType)
+        {
+            if (IsPendingNotify)
+            {
+                CancellationToken.Cancel();
+            }
+            if (Equals(newVal, OriginalNotifyValue))
+            {
+                return;
+            }
+            DelayByRateLimit(() => DoNotify(newVal, notificationType));
+        }
+
+        protected void DoNotify<T_SUB>(T_SUB newVal, string notificationType)
+        {
+            if (!_isNotifiying.Add(notificationType)) return;
             try
             {
-                if (!isNotifiying.Add(notificationType)) return;
                 List<IObservableSubscription> subscribers;
                 if (!_subscribers.TryGetValue(notificationType, out subscribers)) return;
 
@@ -112,15 +173,15 @@ namespace Beobach.Observables
 
                     if (!ShouldNotifyChanged(subscriber, notificationType, newVal) ||
                         alreadyNotified.Any(subscriber.Subscriber)) continue; //dont notify when already notified
-                    var subScriberNotified =
+                    var subscribersNotified =
                         NotificationHelper.CatchNotifications(() => subscriber.NotifyChanged(newVal));
-                    alreadyNotified.AddRange(subScriberNotified.OfType<IObservableProperty>());
+                    alreadyNotified.AddRange(subscribersNotified.OfType<IObservableProperty>());
                 }
                 subscribers.RemoveAll(subscription => subscription.Removed);
             }
             finally
             {
-                isNotifiying.Remove(notificationType);
+                _isNotifiying.Remove(notificationType);
             }
         }
 
@@ -136,28 +197,15 @@ namespace Beobach.Observables
 
         bool IObservableProperty.IsNotifying(string notificationType)
         {
-            return isNotifiying.Contains(notificationType);
+            return _isNotifiying.Contains(notificationType);
         }
 
-        protected virtual void AddSubscription<T_SUB>(ObservableSubscription<T_SUB> subscription,
-            string notificationType)
-        {
-            List<IObservableSubscription> subscribers;
-            if (!_subscribers.TryGetValue(notificationType, out subscribers))
-            {
-                subscribers = new List<IObservableSubscription>();
-                _subscribers.Add(notificationType, subscribers);
-            }
-
-            subscribers.Add(subscription);
-        }
-
-        IObservableSubscription IObservableProperty.Subscribe(Action subscriptionCallback, object subscriber)
+        IObservableSubscription IObservableProperty.Subscribe(Action<object> subscriptionCallback, object subscriber)
         {
             return ((IObservableProperty) this).Subscribe(subscriptionCallback, VALUE_CHANGED_EVENT, subscriber);
         }
 
-        IObservableSubscription IObservableProperty.Subscribe(Action subscriptionCallback,
+        IObservableSubscription IObservableProperty.Subscribe(Action<object> subscriptionCallback,
             string notificationType,
             object subscriber)
         {
@@ -165,7 +213,7 @@ namespace Beobach.Observables
             {
                 throw new NullReferenceException("subscriptionCallback may not be null");
             }
-            return SubscribeEvent<T>((value) => subscriptionCallback(), notificationType, subscriber);
+            return SubscribeEvent<T>((value) => subscriptionCallback(value), notificationType, subscriber);
         }
 
         public ObservableSubscription<T> Subscribe(SubscriptionCallBack<T> subscriptionCallback, object subscriber)
@@ -188,11 +236,62 @@ namespace Beobach.Observables
             {
                 throw new NullReferenceException("subscriptionCallback may not be null");
             }
-            ObservableSubscription<T_SUB> subscription = new ObservableSubscription<T_SUB>(this,
-                subscriptionCallback,
-                subscriber);
+            var subscription = new ObservableSubscription<T_SUB>(this, subscriptionCallback, subscriber);
             AddSubscription(subscription, notificationType);
             return subscription;
+        }
+
+        protected virtual void AddSubscription<T_SUB>(ObservableSubscription<T_SUB> subscription,
+            string notificationType)
+        {
+            List<IObservableSubscription> subscribers;
+            if (!_subscribers.TryGetValue(notificationType, out subscribers))
+            {
+                subscribers = new List<IObservableSubscription>();
+                _subscribers.Add(notificationType, subscribers);
+            }
+            subscribers.Add(subscription);
+        }
+
+        protected int _rateLimit = -1;
+
+        protected virtual bool HasRateLimiter
+        {
+            get { return _rateLimit > 0; }
+        }
+
+        public ObservableProperty<T> RateLimit(int limitMs)
+        {
+            _rateLimit = limitMs;
+            return this;
+        }
+
+        protected CancellationTokenSource CancellationToken;
+        private T _originalNotifyValue;
+
+        protected bool IsPendingNotify
+        {
+            get { return CancellationToken != null; }
+            set { CancellationToken = value ? new CancellationTokenSource() : null; }
+        }
+
+        protected async void DelayByRateLimit(Action action)
+        {
+            if (IsPendingNotify)
+            {
+                CancellationToken.Cancel();
+            }
+            IsPendingNotify = true;
+            try
+            {
+                await Task.Delay(_rateLimit, CancellationToken.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+            IsPendingNotify = false;
+            action();
         }
 
         public string Name { get; set; }
@@ -211,7 +310,5 @@ namespace Beobach.Observables
         {
             get { return false; }
         }
-
-        
     }
 }

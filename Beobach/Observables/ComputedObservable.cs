@@ -11,8 +11,8 @@ namespace Beobach.Observables
         private readonly WriteCallBack<T> _writeCallBack;
         private readonly ComputeCallBack<T> _computeCallBack;
         private bool _isValid;
-        private bool _hasBeenAccessed;
         private bool _isDisposed;
+        private readonly bool _deferEvaluation;
         //observables this computed is subscribed to
         private readonly List<IObservableSubscription> _subscriptions = new List<IObservableSubscription>();
         private HashSet<PropertyAccessNotification> _accessNotifications = new HashSet<PropertyAccessNotification>();
@@ -26,6 +26,7 @@ namespace Beobach.Observables
             WriteCallBack<T> writeCallBack = null,
             bool deferEvaluation = false)
         {
+            _deferEvaluation = deferEvaluation;
             _computeCallBack = computeCallBack;
             _writeCallBack = writeCallBack;
             if (!deferEvaluation)
@@ -41,7 +42,7 @@ namespace Beobach.Observables
                 if (_isDisposed) return _value;
                 NotificationHelper.ValueAccessed(this);
                 if (_isValid) return _value;
-                ComputeValue();
+                ComputeValue(true);
                 return _value;
             }
             set
@@ -54,8 +55,8 @@ namespace Beobach.Observables
 
         public override T Peek()
         {
-            if (!_isValid)
-                ComputeValue();
+            if (!_isValid && _deferEvaluation)
+                ComputeValue(true);
             return base.Peek();
         }
 
@@ -65,12 +66,31 @@ namespace Beobach.Observables
             DisposeSubscriptions();
         }
 
-        private void ComputeValue()
+        private void ComputeValue(bool forceImmediate = false)
         {
-            DisposeSubscriptions();
-            NotifySubscribers(_value, BEFORE_VALUE_CHANGED_EVENT);
-            _hasBeenAccessed = true;
+            OnNotifySubscribers(_value, BEFORE_VALUE_CHANGED_EVENT);
+            notifyImmediate = !forceImmediate;
+            if (!IsPendingNotify && HasRateLimiter)
+                OriginalNotifyValue = _value;
+            if (!forceImmediate && HasRateLimiter)
+            {
+                DelayByRateLimit(ComputeValueImmediate);
+            }
+            else
+            {
+                ComputeValueImmediate();
+            }
+        }
 
+        private void ComputeValueImmediate()
+        {
+            if (IsPendingNotify)
+            {
+                CancellationToken.Cancel();
+            }
+
+            IsPendingNotify = false;
+            DisposeSubscriptions();
             var accessNotifications = NotificationHelper.CatchValuesAccessed(() => _value = _computeCallBack());
             if (!_isDisposed)
             {
@@ -78,10 +98,14 @@ namespace Beobach.Observables
                 UpdateSubscriptions();
             }
             _isValid = true;
-            NotifySubscribers(_value);
+            if (!Equals(_value, OriginalNotifyValue))
+            {
+                NotifySubscribers(_value);
+            }
+            notifyImmediate = false;
         }
 
-        private void OnSubscribedPropertyChanged()
+        private void OnSubscribedPropertyChanged(object value)
         {
             if (!_isValid) return;
             _isValid = false;
@@ -127,11 +151,33 @@ namespace Beobach.Observables
         protected override void AddSubscription<T_SUB>(ObservableSubscription<T_SUB> subscription,
             string notificationType)
         {
-            if (!_hasBeenAccessed)
+            if (!_isValid)
             {
                 ComputeValue(); //todo note why?
             }
             base.AddSubscription(subscription, notificationType);
+        }
+
+        public new ComputedObservable<T> RateLimit(int limitMs)
+        {
+            base.RateLimit(limitMs);
+            return this;
+        }
+
+        private bool notifyImmediate = false;
+
+        protected override void OnNotifyValueChanged(T newVal)
+        {
+            //just call do notify, skip rate limit check as computed does that on the calc end
+            if (!notifyImmediate && HasSubscribers)
+            {
+                //allow normal delay
+                base.OnNotifyValueChanged(newVal);
+            }
+            else
+            {
+                DoNotify(newVal, VALUE_CHANGED_EVENT);
+            }
         }
 
         public override bool IsReadOnly

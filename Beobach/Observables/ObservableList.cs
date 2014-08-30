@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Beobach.Extensions;
 using Beobach.Subscriptions;
 
@@ -13,7 +12,7 @@ namespace Beobach.Observables
     internal interface IObservableList : IObservableProperty
     {
         IArrayChangeSubscription SubscribeArrayChange(Action subscriptionCallback, object subscriber);
-        IArrayChangeSubscription SubscribeIndexChange(Action subscriptionCallback, object subscriber, int index);
+        IArrayChangeSubscription SubscribeIndexChange(Action<object> subscriptionCallback, object subscriber, int index);
     }
 
     public static class ObservableList
@@ -53,11 +52,11 @@ namespace Beobach.Observables
             return SubscribeArrayChange(value => subscriptionCallback(), subscriber);
         }
 
-        IArrayChangeSubscription IObservableList.SubscribeIndexChange(Action subscriptionCallback,
+        IArrayChangeSubscription IObservableList.SubscribeIndexChange(Action<object> subscriptionCallback,
             object subscriber,
             int index)
         {
-            return SubscribeArrayChange(value => subscriptionCallback(), subscriber, index);
+            return SubscribeArrayChange(value => subscriptionCallback(value), subscriber, index);
         }
 
         public ArrayChangeSubscription<T> SubscribeArrayChange(
@@ -72,17 +71,14 @@ namespace Beobach.Observables
             object subscriber,
             int index)
         {
-            ArrayChangeSubscription<T> subscription = new ArrayChangeSubscription<T>(this,
-                subscriptionCallback,
-                subscriber,
-                index);
+            var subscription = new ArrayChangeSubscription<T>(this, subscriptionCallback, subscriber, index);
             AddSubscription(subscription, ARRAY_CHANGE);
             return subscription;
         }
 
         private static ArrayChange<T> ArrayChange(ArrayChangeType changeType, T value, int index)
         {
-            return new ArrayChange<T> {ChangeType = changeType, Value = value, Index = index};
+            return new ArrayChange<T>(changeType, value, index);
         }
 
         private void NotifyArrayChange(IList<T> oldList, IList<T> newList)
@@ -120,7 +116,23 @@ namespace Beobach.Observables
         private void NotifyArrayChange(IEnumerable<ArrayChange<T>> changes)
         {
             if (!HasArrayChangeSubscribers) return;
-            NotifySubscribers((changes as IList<ArrayChange<T>>) ?? changes.ToList(), ARRAY_CHANGE);
+            OnNotifySubscribers((changes as IList<ArrayChange<T>>) ?? changes.ToList(), ARRAY_CHANGE);
+        }
+
+        public override void OnNotifySubscribers<T_SUB>(T_SUB newVal, string notificationType)
+        {
+            switch (notificationType)
+            {
+                    case ARRAY_CHANGE:
+                    OnNotifyArrayChange((IList<ArrayChange<T>>) newVal);
+                    return;
+            }
+            base.OnNotifySubscribers(newVal, notificationType);
+        }
+
+        protected virtual void OnNotifyArrayChange(IList<ArrayChange<T>> changes)
+        {
+            DoNotify(changes, ARRAY_CHANGE);
         }
 
         internal override bool ShouldNotifyChanged<T_SUB>(IObservableSubscription subscription,
