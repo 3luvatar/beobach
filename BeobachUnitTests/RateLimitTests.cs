@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Threading;
 using Beobach.Observables;
 using Beobach.Subscriptions;
@@ -156,6 +157,94 @@ namespace BeobachUnitTests
             Thread.Sleep(550);
             Assert.IsTrue(notifySpy.HasBeenCalled);
             Assert.AreEqual("New", notifySpy.CalledValue);
+        }
+
+        [TestMethod]
+        public void TestNotifyArrayChangeDelay()
+        {
+            ObservableList<string> list = new ObservableList<string>("A", "B", "C", "D", "E", "F").RateLimit(500);
+            NotifySpy notifySpy = new NotifySpy();
+            list.SubscribeArrayChange(notifySpy.Call, "test");
+            list[1] = "B1";
+            Assert.IsFalse(notifySpy.HasBeenCalled);
+            Thread.Sleep(550);
+            Assert.IsTrue(notifySpy.HasBeenCalled);
+            Assert.AreEqual(1, notifySpy.TimesCalled);
+            CollectionAssert.AreEquivalent(
+                new[]
+                {
+                    new ArrayChange<string>(ArrayChangeType.add, "B1", 1),
+                    new ArrayChange<string>(ArrayChangeType.remove, "B", 1),
+                },
+                (ICollection) notifySpy.CalledValue);
+        }
+
+        [TestMethod]
+        public void TestNotifyArrayChangeCombineSeperateChangesNotifications()
+        {
+            ObservableList<string> list = new ObservableList<string>("A", "B", "C", "D", "E", "F").RateLimit(500);
+            NotifySpy notifySpy = new NotifySpy();
+            list.SubscribeArrayChange(notifySpy.Call, "test");
+            list[1] = "B1";
+            list[3] = "D1";
+            list[1] = "B2";
+            Assert.IsFalse(notifySpy.HasBeenCalled);
+            Thread.Sleep(550);
+            Assert.IsTrue(notifySpy.HasBeenCalled);
+            Assert.AreEqual(1, notifySpy.TimesCalled);
+            CollectionAssert.AreEquivalent(
+                new[]
+                {
+                    new ArrayChange<string>(ArrayChangeType.add, "B2", 1),
+                    new ArrayChange<string>(ArrayChangeType.remove, "B", 1),
+                    new ArrayChange<string>(ArrayChangeType.add, "D1", 3),
+                    new ArrayChange<string>(ArrayChangeType.remove, "D", 3),
+                },
+                (ICollection) notifySpy.CalledValue);
+        }
+
+        [TestMethod]
+        public void TestListDelayNotifyRemoveAddCombine()
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                bool isAdd = i > 1;
+                NotifySpy notifySpy = new NotifySpy();
+                ObservableList<string> list = new ObservableList<string>("A", "B", "C", "D", "E", "F").RateLimit(500);
+                list.SubscribeArrayChange(notifySpy.Call, "test");
+                //test against both remove first and add first
+                //using mod to switch between add/remove before or after to test both scenarios 
+                if (i%2 == 0)
+                {
+                    list[1] = "B1";
+                }
+                if (isAdd)
+                {
+                    list.Add("G");
+                }
+                else
+                {
+                    list.RemoveAt(5); //remove F
+                }
+                if (i%2 == 1)
+                {
+                    list[1] = "B1";
+                }
+                Assert.IsFalse(notifySpy.HasBeenCalled);
+                Thread.Sleep(550);
+                Assert.IsTrue(notifySpy.HasBeenCalled);
+                Assert.AreEqual(1, notifySpy.TimesCalled);
+                CollectionAssert.AreEquivalent(
+                    new[]
+                    {
+                        new ArrayChange<string>(ArrayChangeType.add, "B1", 1),
+                        new ArrayChange<string>(ArrayChangeType.remove, "B", 1),
+                        isAdd
+                            ? new ArrayChange<string>(ArrayChangeType.add, "G", 6)
+                            : new ArrayChange<string>(ArrayChangeType.remove, "F", 5),
+                    },
+                    (ICollection) notifySpy.CalledValue);
+            }
         }
     }
 

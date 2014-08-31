@@ -149,7 +149,7 @@ namespace Beobach.Observables
         {
             if (IsPendingNotify)
             {
-                CancellationToken.Cancel();
+                ValueChangeNotifyCancellationToken.Cancel();
             }
             if (Equals(newVal, OriginalNotifyValue))
             {
@@ -266,25 +266,25 @@ namespace Beobach.Observables
             return this;
         }
 
-        protected CancellationTokenSource CancellationToken;
+        protected CancellationTokenSource ValueChangeNotifyCancellationToken;
         private T _originalNotifyValue;
 
-        protected bool IsPendingNotify
+        protected virtual bool IsPendingNotify
         {
-            get { return CancellationToken != null; }
-            set { CancellationToken = value ? new CancellationTokenSource() : null; }
+            get { return ValueChangeNotifyCancellationToken != null; }
+            set { ValueChangeNotifyCancellationToken = value ? new CancellationTokenSource() : null; }
         }
 
         protected async void DelayByRateLimit(Action action)
         {
             if (IsPendingNotify)
             {
-                CancellationToken.Cancel();
+                ValueChangeNotifyCancellationToken.Cancel();
             }
             IsPendingNotify = true;
             try
             {
-                await Task.Delay(_rateLimit, CancellationToken.Token);
+                await Task.Delay(_rateLimit, ValueChangeNotifyCancellationToken.Token);
             }
             catch (TaskCanceledException)
             {

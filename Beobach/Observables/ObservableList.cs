@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Beobach.Extensions;
 using Beobach.Subscriptions;
 
@@ -40,6 +42,33 @@ namespace Beobach.Observables
 
         public ObservableList(params T[] values) : this(values.ToList())
         {
+        }
+
+        public override List<T> Value
+        {
+            get
+            {
+                NotificationHelper.IndexAccessed(this, SUBSCRIBE_ALL_CHANGES_INDEX);
+                return _value;
+            }
+            set { base.Value = value; }
+        }
+
+        public T this[int index]
+        {
+            get
+            {
+                NotificationHelper.IndexAccessed(this, index);
+                return _value[index];
+            }
+            set
+            {
+                T oldVal = _value[index];
+                _value[index] = value;
+                NotifySubscribers(_value);
+                NotifyArrayChange(ArrayChange(ArrayChangeType.add, value, index),
+                    ArrayChange(ArrayChangeType.remove, oldVal, index));
+            }
         }
 
         private bool HasArrayChangeSubscribers
@@ -123,16 +152,122 @@ namespace Beobach.Observables
         {
             switch (notificationType)
             {
-                    case ARRAY_CHANGE:
+                case ARRAY_CHANGE:
                     OnNotifyArrayChange((IList<ArrayChange<T>>) newVal);
                     return;
             }
             base.OnNotifySubscribers(newVal, notificationType);
         }
 
+        private IList<ArrayChange<T>> _pendingNotifyChanges;
+
         protected virtual void OnNotifyArrayChange(IList<ArrayChange<T>> changes)
         {
+            if (!HasRateLimiter)
+            {
+                DoNotify(changes, ARRAY_CHANGE);
+            }
+            else
+            {
+                if (IsPendingArrayNotify)
+                {
+                    ArrayChangeNotifyCancellationToken.Cancel();
+                    _pendingNotifyChanges = coalesceArrayChanges(_pendingNotifyChanges, changes);
+                }
+                else
+                {
+                    _pendingNotifyChanges = changes;
+                }
+                DelayArrayChangeNotify(_pendingNotifyChanges);
+            }
+        }
+
+        private async void DelayArrayChangeNotify(IList<ArrayChange<T>> changes)
+        {
+            IsPendingArrayNotify = true;
+            try
+            {
+                await Task.Delay(_rateLimit, ArrayChangeNotifyCancellationToken.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+            IsPendingArrayNotify = false;
             DoNotify(changes, ARRAY_CHANGE);
+        }
+
+        private static IList<ArrayChange<T>> coalesceArrayChanges(IList<ArrayChange<T>> originalChanges,
+            IList<ArrayChange<T>> newChanges)
+        {
+            var validChanges = new List<ArrayChange<T>>();
+            var groups = originalChanges.FullOuterGroupJoin(newChanges,
+                change => change.Index,
+                change => change.Index,
+                (original, newChange, index) => new {original, newChanges = newChange, index});
+            foreach (var arg in groups)
+            {
+                //TODO fix this ugly shit, test's TestListDelayNotifyRemoveAddCombine and TestNotifyArrayChangeCombineSeperateChangesNotifications should still pass
+                bool hasOriginalChanges = false;
+                int i = 0;
+                ArrayChange<T> oldAddChange = null;
+                foreach (var change in arg.original)
+                {
+                    i++;
+                    if (i >= 3)
+                    {
+                        throw new IndexOutOfRangeException("not sure why I should ever get this");
+                    }
+                    hasOriginalChanges = true;
+                    if (change.ChangeType == ArrayChangeType.remove)
+                    {
+                        validChanges.Add(change);
+                    }
+                    else
+                    {
+                        oldAddChange = change;
+                    }
+                }
+                if (!hasOriginalChanges)
+                {
+                    validChanges.AddRange(arg.newChanges);
+                    continue;
+                }
+                i = 0;
+                bool hasNewChanges = false;
+                foreach (var change in arg.newChanges)
+                {
+                    i++;
+                    if (i >= 3)
+                    {
+                        throw new IndexOutOfRangeException("not sure why I should ever get this");
+                    }
+                    hasNewChanges = true;
+                    if (change.ChangeType == ArrayChangeType.add)
+                    {
+                        validChanges.Add(change);
+                    }
+                }
+                if (!hasNewChanges &&
+                    oldAddChange != null)
+                {
+                    validChanges.Add(oldAddChange);
+                }
+            }
+            return validChanges;
+        }
+
+        protected CancellationTokenSource ArrayChangeNotifyCancellationToken;
+
+        protected bool IsPendingArrayNotify
+        {
+            get { return ArrayChangeNotifyCancellationToken != null; }
+            set
+            {
+                ArrayChangeNotifyCancellationToken = value ? new CancellationTokenSource() : null;
+                if (!value)
+                    _pendingNotifyChanges = null;
+            }
         }
 
         internal override bool ShouldNotifyChanged<T_SUB>(IObservableSubscription subscription,
@@ -151,31 +286,10 @@ namespace Beobach.Observables
             return base.ShouldNotifyChanged(subscription, notificationType, newVal);
         }
 
-        public override List<T> Value
+        public new ObservableList<T> RateLimit(int limitMs)
         {
-            get
-            {
-                NotificationHelper.IndexAccessed(this, SUBSCRIBE_ALL_CHANGES_INDEX);
-                return _value;
-            }
-            set { base.Value = value; }
-        }
-
-        public T this[int index]
-        {
-            get
-            {
-                NotificationHelper.IndexAccessed(this, index);
-                return _value[index];
-            }
-            set
-            {
-                T oldVal = _value[index];
-                _value[index] = value;
-                NotifySubscribers(_value);
-                NotifyArrayChange(ArrayChange(ArrayChangeType.add, value, index),
-                    ArrayChange(ArrayChangeType.remove, oldVal, index));
-            }
+            base.RateLimit(limitMs);
+            return this;
         }
 
         public T Pop()

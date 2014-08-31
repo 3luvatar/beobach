@@ -86,7 +86,7 @@ namespace Beobach.Observables
         {
             if (IsPendingNotify)
             {
-                CancellationToken.Cancel();
+                ValueChangeNotifyCancellationToken.Cancel();
             }
 
             IsPendingNotify = false;
