@@ -98,7 +98,7 @@ namespace Beobach.Observables
                 UpdateSubscriptions();
             }
             _isValid = true;
-            if (!Equals(_value, OriginalNotifyValue))
+            if (!HasRateLimiter || !Equals(_value, OriginalNotifyValue))
             {
                 NotifySubscribers(_value);
             }
@@ -183,6 +183,11 @@ namespace Beobach.Observables
         public override bool IsReadOnly
         {
             get { return _writeCallBack == null; }
+        }
+
+        public void Invalidate()
+        {
+            ComputeValue();
         }
     }
 

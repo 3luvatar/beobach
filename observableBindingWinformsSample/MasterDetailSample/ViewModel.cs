@@ -10,9 +10,9 @@ namespace observableBindingWinformsSample.MasterDetailSample
     public class ViewModel
     {
         public readonly ObservableList<Guest> Guests =
-            new ObservableList<Guest>(new Guest("Becky", new DateTime(2014, 7, 25)),
-                new Guest("Jonathan", new DateTime(2014, 8, 1)),
-                new Guest("Jacob", new DateTime(2014, 8, 5)));
+            new ObservableList<Guest>(new Guest("Becky", new DateTime(2014, 7, 25)) {FoodChoice = { Value = FoodChoice.bacon}},
+                new Guest("Jonathan", new DateTime(2014, 8, 1)) {FoodChoice = { Value = FoodChoice.steak}},
+                new Guest("Jacob", new DateTime(2014, 8, 5)) {FoodChoice = { Value = FoodChoice.chicken}});
 
         public readonly ComputedObservable<int> AttendingGuests;
         public readonly ComputedObservable<Dictionary<FoodChoice, int>> FoodTypeCounts;

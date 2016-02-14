@@ -195,13 +195,12 @@ namespace BeobachUnitTests
         [TestMethod]
         public void TestSubscriptionCounts()
         {
-            var underlyingPropertyLeft = new ObservableProperty<int>(1) { Name = "Left" };
-            var underlyingPropertyRight = new ObservableProperty<int>(1) { Name = "Right" };
+            var underlyingPropertyLeft = new ObservableProperty<int>(1) {Name = "Left"};
+            var underlyingPropertyRight = new ObservableProperty<int>(1) {Name = "Right"};
             var simpleComputed = new ComputedObservable<int>(() => underlyingPropertyLeft + 5, true);
             var layerdComputed = new ComputedObservable<int>(() => simpleComputed + underlyingPropertyRight);
             Assert.AreEqual(simpleComputed.DependencyCount, 1);
             Assert.AreEqual(layerdComputed.DependencyCount, 2);
-
         }
 
         [TestMethod]
@@ -299,7 +298,6 @@ namespace BeobachUnitTests
             {
                 Assert.Fail("Stack overflow");
             }
-            
         }
 
         [TestMethod]
@@ -359,6 +357,43 @@ namespace BeobachUnitTests
                 return 1;
             });
             Assert.AreEqual(1, timesEvaluated);
+        }
+
+        
+
+        [TestMethod]
+        public void TestTwoWayComputed()
+        {
+            var testEnumProperty = new ObservableProperty<TestEnum>();
+            var computed = Observe.TwoWayComputed(() => testEnumProperty);
+            TestEnum lastNotifyValue = TestEnum.two;
+            computed.Subscribe(value => lastNotifyValue = value, "test");
+            Assert.AreEqual(TestEnum.one, computed.Value);
+            testEnumProperty.Value = TestEnum.two;
+            Assert.AreEqual(TestEnum.two, computed.Value);
+            Assert.AreEqual(TestEnum.two, lastNotifyValue);
+            testEnumProperty.Value = TestEnum.one;
+            Assert.AreEqual(TestEnum.one, computed.Value);
+            Assert.AreEqual(TestEnum.one, lastNotifyValue);
+        }
+
+        [TestMethod]
+        public void TestComplexTwoWayBinding()
+        {
+            var kevin = new TestModel("Kevin") ;
+            var jacob = new TestModel("Jacob") {TestEnumValue = { Value = TestEnum.three}};
+            var observableObject = new ObservableProperty<TestModel>(kevin);
+
+            var testEnumObserver = Observe.TwoWayComputed(() => observableObject.Value.TestEnumValue);
+            Assert.AreEqual(TestEnum.one, testEnumObserver.Value);
+            testEnumObserver.Value = TestEnum.two;
+            Assert.AreEqual(TestEnum.two, kevin.TestEnumValue.Value);
+            observableObject.Value = jacob;
+            Assert.AreEqual(TestEnum.three, testEnumObserver.Value);
+            testEnumObserver.Value = TestEnum.one;
+            
+            observableObject.Value = kevin;
+            Assert.AreEqual(TestEnum.two, testEnumObserver.Value);
         }
     }
 }

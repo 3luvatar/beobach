@@ -139,11 +139,7 @@ namespace Beobach.Observables
             DoNotify(oldVal, BEFORE_VALUE_CHANGED_EVENT);
         }
 
-        protected T OriginalNotifyValue
-        {
-            get { return _originalNotifyValue; }
-            set { _originalNotifyValue = value; }
-        }
+        protected T OriginalNotifyValue { get; set; }
 
         private void NotifyDelay(T newVal, string notificationType)
         {
@@ -267,7 +263,6 @@ namespace Beobach.Observables
         }
 
         protected CancellationTokenSource ValueChangeNotifyCancellationToken;
-        private T _originalNotifyValue;
 
         protected virtual bool IsPendingNotify
         {

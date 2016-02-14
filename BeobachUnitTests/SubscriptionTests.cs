@@ -20,6 +20,16 @@ namespace BeobachUnitTests
         }
 
         [TestMethod]
+        public void TestNotifyDefaultValueChange()
+        {
+            var property = new ObservableProperty<string>();
+            string notifiedValue = null;
+            property.Subscribe(value => notifiedValue = value, "test");
+            property.Value = "test";
+            Assert.AreEqual("test", notifiedValue);
+        }
+
+        [TestMethod]
         public void TestUnsubscribe()
         {
             var property = new ObservableProperty<string>("initVal");

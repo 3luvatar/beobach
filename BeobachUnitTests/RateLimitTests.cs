@@ -101,7 +101,7 @@ namespace BeobachUnitTests
             observable.Value = "A";
             observable.Value = "B";
             Assert.IsFalse(notifySpy.HasBeenCalled);
-            Thread.Sleep(510);
+            Thread.Sleep(550);
             Assert.IsTrue(notifySpy.HasBeenCalled);
             Assert.AreEqual("B", notifySpy.CalledValue);
         }

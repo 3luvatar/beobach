@@ -53,9 +53,9 @@ namespace Beobach.BindingProviders
         public static void BindCheckBox(this ObservableProperty<bool> property, CheckBox checkBox)
         {
             property.Subscribe(value => checkBox.Checked = value, checkBox);
+            checkBox.Checked = property;
             if (!property.IsReadOnly)
                 checkBox.CheckedChanged += (sender, args) => property.Value = checkBox.Checked;
-            checkBox.Checked = property;
         }
 
         public static void BindDate(this ObservableProperty<DateTime> property, MonthCalendar calendar)
